@@ -154,12 +154,30 @@ object ProcessSuite extends tests.Suite {
     val pb = new ProcessBuilder("echo.sh")
     pb.environment.put("PATH", resourceDir)
     val proc = pb.start()
+    assert(proc.isAlive)
     val os = proc.getOutputStream
-    os.write("hello\n".getBytes)
+    val n = 4096 * 6 + 16
+    (0 until (n - 8)).foreach { _ =>
+      os.write("four\n".getBytes)
+      os.flush()
+    }
+    val part1 = Source.fromInputStream(proc.getInputStream).take(n - 8).mkString
+    println(n - 8)
+    println(part1.length)
+    println("ok")
+    (0 until 8).foreach { _ =>
+      os.write("four\n".getBytes)
+      os.flush()
+    }
     os.write("quit\n".getBytes)
     os.flush()
-    proc.waitFor
-    val out = readInputStream(proc.getInputStream)
-    assert(out == "hello")
+    println("waiting")
+    assert(proc.waitFor(1, TimeUnit.SECONDS))
+    val part2 = Source.fromInputStream(proc.getInputStream).mkString
+    println("finished")
+    val expected = "four" * n
+    println(n)
+    println(part1.length + part2.length)
+    assert(s"$part1$part2" == expected)
   }
 }
