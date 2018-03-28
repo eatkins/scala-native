@@ -149,4 +149,17 @@ object ProcessSuite extends tests.Suite {
     assert(p.waitFor(100, TimeUnit.MILLISECONDS))
     assert(p.exitValue == 0x80 + 9)
   }
+
+  addTest("large outputs") {
+    val pb = new ProcessBuilder("echo.sh")
+    pb.environment.put("PATH", resourceDir)
+    val proc = pb.start()
+    val os = proc.getOutputStream
+    os.write("hello\n".getBytes)
+    os.write("quit\n".getBytes)
+    os.flush()
+    proc.waitFor
+    val out = readInputStream(proc.getInputStream)
+    assert(out == "hello")
+  }
 }
