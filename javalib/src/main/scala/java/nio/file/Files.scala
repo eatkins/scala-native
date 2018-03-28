@@ -33,9 +33,13 @@ import java.util.{
 import java.util.stream.{Stream, WrappedScalaStream}
 
 import scalanative.native._
-import scalanative.posix.{limits, unistd}
+import scalanative.posix.{dirent, fcntl, limits, unistd}, dirent._
+import scalanative.posix.errno._
 import scalanative.posix.sys.stat
+import stdlib._, stdio._, string._
+import scalanative.nio.fs.UnixException
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.{Map => SMap, Stream => SStream, Set => SSet}
 
 object Files {
@@ -72,10 +76,28 @@ object Files {
   }
 
   def copy(source: Path, target: Path, options: Array[CopyOption]): Path = {
-    val in = newInputStream(source, Array.empty)
-    try copy(in, target, options)
-    finally in.close()
+    if (isDirectory(source, Array.empty)) {
+      createDirectory(target, Array.empty)
+    } else {
+      val in = newInputStream(source, Array.empty)
+      try copy(in, target, options)
+      finally in.close()
+    }
     target
+  }
+
+  private def copyDir(source: Path,
+                      target: Path,
+                      options: Array[CopyOption]): Unit = {
+    if (options.contains(StandardCopyOption.REPLACE_EXISTING)) {
+      deleteRecursive(target)
+    }
+    createDirectory(target, Array.empty)
+    list(source).iterator.asScala.foreach {
+      case p if isDirectory(p, Array.empty) =>
+        copyDir(p, target.resolve(source.relativize(p)), options)
+      case p => copy(p, target.resolve(source.relativize(p)), options)
+    }
   }
 
   private def copy(in: InputStream, out: OutputStream): Long = {
@@ -193,6 +215,15 @@ object Files {
                      attrs: Array[FileAttribute[_]]): Path =
     createTempFile(null: File, prefix, suffix, attrs)
 
+  private def deleteRecursive(path: Path): Unit = {
+    if (isDirectory(path, Array.empty)) {
+      list(path).iterator.asScala.foreach { p =>
+        if (isDirectory(p, Array.empty)) deleteRecursive(p)
+        else deleteIfExists(p)
+      }
+    }
+    deleteIfExists(path)
+  }
   def delete(path: Path): Unit =
     if (!exists(path, Array.empty)) {
       throw new NoSuchFileException(path.toString)
@@ -221,7 +252,7 @@ object Files {
                                             Array.empty).readAttributes()
       matcher.test(p, attributes)
     }
-    new WrappedScalaStream(stream, None)
+    new WrappedScalaStream(stream.toStream, None)
   }
 
   def getAttribute(path: Path,
@@ -317,19 +348,61 @@ object Files {
   def lines(path: Path, cs: Charset): Stream[String] =
     newBufferedReader(path, cs).lines(true)
 
-  private def _list(dir: Path): SStream[Path] =
-    dir.toFile().list().toStream.map(dir.resolve)
-
-  def list(dir: Path): Stream[Path] =
-    if (!isDirectory(dir, Array.empty)) {
-      throw new NotDirectoryException(dir.toString)
-    } else {
-      new WrappedScalaStream(_list(dir), None)
+  private case class Dirent(basePath: Path, name: String, tpe: CShort) {
+    lazy val path = basePath.resolve(name)
+  }
+  private def _list(path: Path): scala.Iterator[Dirent] =
+    new scala.Iterator[Dirent] {
+      class Wrapped(val ptr: Ptr[Void])
+      var dir: Ptr[Void] = null
+      Zone { implicit z =>
+        dir = opendir(toCString(path.toString))
+        if (dir == null) throw UnixException(path.toString, errno.errno)
+      }
+      val elem: Ptr[dirent] = stdlib.malloc(sizeof[dirent]).cast[Ptr[dirent]]
+      var _hasNext          = false
+      def hasNext           = _hasNext
+      def getNext(): Unit =
+        do {
+          // dir is assumed non-null at this point
+          _hasNext = readdir(dir, elem) == 0
+          if (!_hasNext) {
+            closedir(dir)
+            stdlib.free(elem.cast[Ptr[Byte]])
+            return
+          } else if (!elem._2._1 == '.') {
+            // java doesn't list '.' and '..', we filter them out.
+            val nextByte = !(elem._2._2)
+            if (nextByte == 0 || (nextByte == '.' && (!(elem._2._3) == 0))) {
+              _hasNext = false
+            }
+          }
+        } while (!_hasNext)
+      getNext()
+      def next: Dirent = {
+        val res =
+          if (_hasNext)
+            Dirent(path, fromCString(elem._2.asInstanceOf[CString]), !elem._3)
+          else throw new NoSuchElementException("next on empty iterator")
+        getNext()
+        res
+      }
     }
 
+  def list(dir: Path): Stream[Path] =
+    new WrappedScalaStream(_list(dir).toStream.map(_.path), None)
+
   def move(source: Path, target: Path, options: Array[CopyOption]): Path = {
-    copy(source, target, options)
-    delete(source)
+    if (options.contains(StandardCopyOption.ATOMIC_MOVE)) {
+      Zone { implicit z =>
+        stdio.rename(toCString(source.toAbsolutePath().toString),
+                     toCString(target.toAbsolutePath().toString))
+      }
+    } else {
+      if (isDirectory(source, Array.empty)) copyDir(source, target, options)
+      else copy(source, target, options)
+      deleteRecursive(source)
+    }
     target
   }
 
@@ -393,17 +466,21 @@ object Files {
   def notExists(path: Path, options: Array[LinkOption]): Boolean =
     !exists(path, options)
 
-  def readAllBytes(path: Path): Array[Byte] = {
-    val bytes  = new Array[Byte](size(path).toInt)
-    val buffer = new Array[Byte](4096)
-    val input  = newInputStream(path, Array.empty)
-    var offset = 0
-    var read   = 0
-    while ({ read = input.read(buffer); read != -1 }) {
-      System.arraycopy(buffer, 0, bytes, offset, read)
-      offset += read
-    }
-    bytes
+  def readAllBytes(path: Path): Array[Byte] = Zone { implicit z =>
+    val len   = size(path).toInt
+    val bytes = scala.scalanative.runtime.ByteArray.alloc(len)
+    val fd    = fcntl.open(toCString(path.toString), fcntl.O_RDONLY)
+    try {
+      var offset = 0
+      var read   = 0
+      while ({
+        read = unistd.read(fd, bytes.at(offset), len - offset);
+        read != -1 && (offset + read) < len
+      }) {
+        offset += read
+      }
+      bytes.asInstanceOf[Array[Byte]]
+    } finally fcntl.close(fd)
   }
 
   def readAllLines(path: Path): List[String] =
@@ -462,7 +539,7 @@ object Files {
       Zone { implicit z =>
         val buf: CString = alloc[Byte](limits.PATH_MAX)
         if (unistd.readlink(toCString(link.toString), buf, limits.PATH_MAX) == -1) {
-          throw new IOException()
+          throw UnixException(link.toString, errno.errno)
         } else {
           Paths.get(fromCString(buf), Array.empty)
         }
@@ -523,28 +600,25 @@ object Files {
                    maxDepth: Int,
                    currentDepth: Int,
                    options: Array[FileVisitOption],
-                   visited: SSet[Path]): SStream[Path] =
-    if (!isDirectory(start, Array.empty))
-      throw new NotDirectoryException(start.toString)
-    else {
-      start #:: _list(start).flatMap {
-        case p
-            if isSymbolicLink(p) && options.contains(
-              FileVisitOption.FOLLOW_LINKS) =>
-          val newVisited = visited + p
-          val target     = readSymbolicLink(p)
-          if (newVisited.contains(target))
-            throw new FileSystemLoopException(p.toString)
-          else walk(p, maxDepth, currentDepth + 1, options, newVisited)
-        case p
-            if isDirectory(p, Array(LinkOption.NOFOLLOW_LINKS)) && currentDepth < maxDepth =>
-          val newVisited =
-            if (options.contains(FileVisitOption.FOLLOW_LINKS)) visited + p
-            else visited
-          walk(p, maxDepth, currentDepth + 1, options, newVisited)
-        case p => p #:: SStream.Empty
-      }
+                   visited: SSet[Path]): SStream[Path] = {
+    start #:: _list(start).toStream.flatMap {
+      case p
+          if p.tpe == DT_LNK && options.contains(
+            FileVisitOption.FOLLOW_LINKS) =>
+        val newVisited = visited + p.path
+        val target     = readSymbolicLink(p.path)
+        if (newVisited.contains(target))
+          throw new FileSystemLoopException(p.path.toString)
+        else walk(p.path, maxDepth, currentDepth + 1, options, newVisited)
+      case p if p.tpe == DT_DIR && currentDepth < maxDepth =>
+        val newVisited =
+          if (options.contains(FileVisitOption.FOLLOW_LINKS)) visited + p.path
+          else visited
+        walk(p.path, maxDepth, currentDepth + 1, options, newVisited)
+      case p =>
+        p.path #:: SStream.Empty
     }
+  }
 
   def walkFileTree(start: Path, visitor: FileVisitor[_ >: Path]): Path =
     walkFileTree(start,

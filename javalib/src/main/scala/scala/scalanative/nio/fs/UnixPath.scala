@@ -2,7 +2,7 @@ package scala.scalanative.nio.fs
 
 import java.io.File
 import java.net.URI
-import java.nio.file.{FileSystem, LinkOption, Path, WatchEvent, WatchKey}
+import java.nio.file.{FileSystem, Files, LinkOption, Path, WatchEvent, WatchKey}
 import java.util.Iterator
 
 import scala.collection.mutable.UnrolledBuffer
@@ -126,12 +126,19 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
     }
   }
 
-  override def toAbsolutePath(): Path =
-    new UnixPath(fs, toFile().getAbsolutePath())
+  override def toAbsolutePath(): Path = {
+    if (File.isAbsolute(path)) this
+    else new UnixPath(fs, toFile().getAbsolutePath())
+  }
 
   override def toRealPath(options: Array[LinkOption]): Path = {
     if (options.contains(LinkOption.NOFOLLOW_LINKS)) toAbsolutePath()
-    else new UnixPath(fs, toFile().getCanonicalPath())
+    else {
+      new UnixPath(fs, toFile().getCanonicalPath()) match {
+        case p if Files.exists(p, Array.empty) => p
+        case p                                 => throw new java.io.IOException(s"File $p does not exist")
+      }
+    }
   }
 
   override def toFile(): File =
@@ -149,12 +156,16 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
 
   override def iterator(): Iterator[Path] =
     new Iterator[Path] {
+      val parts = path.split("/") match {
+        case Array("", rest @ _*) if rest.length > 0 => rest
+        case a                                       => a.toSeq
+      }
       private var i: Int              = 0
       override def remove(): Unit     = throw new UnsupportedOperationException()
-      override def hasNext(): Boolean = i < getNameCount()
+      override def hasNext(): Boolean = i < parts.length
       override def next(): Path =
         if (hasNext) {
-          val name = getName(i)
+          val name = new UnixPath(fs, parts(i))
           i += 1
           name
         } else {
@@ -185,7 +196,43 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
 }
 
 private object UnixPath {
+  def fastNormalize(path: String): String = {
+    var i       = 0
+    var current = path.charAt(0)
+    var begin   = 0
+    while (i < path.size - 1) {
+      val next = path.charAt(i + 1)
+      current match {
+        case '/' =>
+          next match {
+            case '/' => return null
+            case '.' =>
+              if (i < path.size - 2) {
+                path.charAt(i + 2) match {
+                  case '.' | '/' => return null
+                  case _         =>
+                }
+              }
+            case _ =>
+          }
+        case '.' if next == '/' && i == 0 => begin += 2
+        case _                            =>
+      }
+      current = next
+      i += 1
+    }
+    path.charAt(i) match {
+      case '.' if i > 0 && path.charAt(i - 1) == '/' =>
+        path.substring(begin, i - 1)
+      case '/' if i > 0   => path.substring(begin, i)
+      case _ if begin > 0 => path.substring(begin)
+      case _              => path
+    }
+  }
   def normalized(path: String): String = {
+    if (path.length < 2) return path
+    val res = fastNormalize(path)
+    if (res != null) return res
     val absolute = path.startsWith("/")
     val components =
       path
@@ -212,8 +259,8 @@ private object UnixPath {
           if (str.endsWith("/")) str.substring(0, str.length - 1) else str //length > 1
         case idx =>
           val buffer: StringBuffer = new StringBuffer(str)
-          var previous = '/'
-          var i = idx + 1
+          var previous             = '/'
+          var i                    = idx + 1
           while (i < buffer.length) {
             val current = buffer.charAt(i)
             if (previous == '/' && current == '/') {
@@ -224,7 +271,8 @@ private object UnixPath {
             }
           }
           val result = buffer.toString
-          if (result.length > 1 && result.endsWith("/")) result.substring(0, result.length - 1)
+          if (result.length > 1 && result.endsWith("/"))
+            result.substring(0, result.length - 1)
           else result
       }
     }

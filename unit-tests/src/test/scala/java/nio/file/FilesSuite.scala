@@ -1177,10 +1177,7 @@ object FilesSuite extends tests.Suite {
       Files.write(f, Array[Byte](1, 2, 3))
       val channel = Files.newByteChannel(f)
       val buffer  = ByteBuffer.allocate(10)
-      var read    = 0
-      while (channel.read(buffer) != -1) {
-        read += 1
-      }
+      val read    = channel.read(buffer)
       assert(read == 3)
       assert(buffer.get(0) == 1)
       assert(buffer.get(1) == 2)
