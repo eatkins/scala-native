@@ -183,7 +183,11 @@ object UnixProcess {
           unistd.close(!(errfds + 1))
 
           binaries.foreach { b =>
-            unistd.execve(toCString(b), argv, envp)
+            if (unistd.execve(toCString(b), argv, envp) == -1 && errno == e.ENOEXEC) {
+              unistd.execve(toCString("/bin/sh"),
+                            nullTerminate("-c" +: cmd),
+                            envp)
+            }
           }
           // The spec of vfork requires calling _exit if the child process fails to execve.
           unistd._exit(1)
