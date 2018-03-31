@@ -9,6 +9,16 @@ object TimeSuite extends tests.Suite {
   tzset()
   val now_time_t: time_t = time.time(null)
   val epoch: time_t      = 0
+  Zone { implicit z =>
+    val major = alloc[CInt]
+    val minor = alloc[CInt]
+    val patch = alloc[CInt]
+    scala.scalanative.runtime.Platform.macOSXVersion(major, minor, patch)
+    println(s"Got version ${!major}.${!minor}.${!patch}")
+    println(scala.util.Properties.isMac)
+    println(System.getProperty("os.name"))
+    println(System.getProperty("os.version"))
+  }
 
   test("asctime() with a given known state should match its representation") {
     Zone { implicit z =>

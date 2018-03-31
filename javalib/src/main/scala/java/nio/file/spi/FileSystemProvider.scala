@@ -36,6 +36,7 @@ abstract class FileSystemProvider protected () {
   def newFileSystem(path: Path, env: Map[String, _]): FileSystem =
     throw new UnsupportedOperationException()
 
+  def newInputStream(path: Path, _options: OpenOption*): InputStream = newInputStream(path, _options.toArray)
   def newInputStream(path: Path, _options: Array[OpenOption]): InputStream = {
     val options =
       if (_options.isEmpty) Array[OpenOption](StandardOpenOption.READ)
@@ -54,6 +55,7 @@ abstract class FileSystemProvider protected () {
     }
   }
 
+  def newOutputStream(path: Path, _options: OpenOption*): OutputStream = newOutputStream(path, _options.toArray)
   def newOutputStream(path: Path, _options: Array[OpenOption]): OutputStream = {
     val options =
       if (_options.isEmpty)
@@ -76,6 +78,9 @@ abstract class FileSystemProvider protected () {
 
   def newFileChannel(path: Path,
                      options: Set[_ <: OpenOption],
+                     attrs: FileAttribute[_]*): FileChannel = newFileChannel(path, options, attrs.toArray)
+  def newFileChannel(path: Path,
+                     options: Set[_ <: OpenOption],
                      attrs: Array[FileAttribute[_]]): FileChannel =
     throw new UnsupportedOperationException
 
@@ -88,6 +93,9 @@ abstract class FileSystemProvider protected () {
 
   def newByteChannel(path: Path,
                      options: Set[_ <: OpenOption],
+                     attrs: FileAttribute[_]*): SeekableByteChannel = newByteChannel(path, options, attrs.toArray)
+  def newByteChannel(path: Path,
+                     options: Set[_ <: OpenOption],
                      attrs: Array[FileAttribute[_]]): SeekableByteChannel =
     FileChannel.open(path, options, attrs)
 
@@ -95,8 +103,12 @@ abstract class FileSystemProvider protected () {
       dir: Path,
       filter: DirectoryStream.Filter[_ >: Path]): DirectoryStream[Path]
 
+  def createDirectory(dir: Path, attrs: FileAttribute[_]*): Unit = createDirectory(dir, attrs.toArray)
   def createDirectory(dir: Path, attrs: Array[FileAttribute[_]]): Unit
 
+  def createSymbolicLink(link: Path,
+                         target: Path,
+                         attrs: FileAttribute[_]*): Unit = createSymbolicLink(link, target, attrs.toArray)
   def createSymbolicLink(link: Path,
                          target: Path,
                          attrs: Array[FileAttribute[_]]): Unit =
@@ -116,16 +128,23 @@ abstract class FileSystemProvider protected () {
   def readSymbolicLink(link: Path): Path =
     throw new UnsupportedOperationException
 
+  def copy(source: Path, target: Path, options: CopyOption*): Unit = copy(source, target, options.toArray)
   def copy(source: Path, target: Path, options: Array[CopyOption]): Unit
 
+  def move(source: Path, target: Path, options: CopyOption*): Unit = move(source, target, options.toArray)
   def move(source: Path, target: Path, options: Array[CopyOption]): Unit
 
   def isSameFile(path: Path, path2: Path): Boolean
 
   def isHidden(path: Path): Boolean
 
+  def checkAccess(path: Path, modes: AccessMode*): Unit = checkAccess(path, modes.toArray)
   def checkAccess(path: Path, modes: Array[AccessMode]): Unit
 
+  def getFileAttributeView[V <: FileAttributeView](
+      path: Path,
+      tpe: Class[V],
+      options: LinkOption*): V = getFileAttributeView(path, tpe, options.toArray)
   def getFileAttributeView[V <: FileAttributeView](
       path: Path,
       tpe: Class[V],
@@ -133,11 +152,23 @@ abstract class FileSystemProvider protected () {
 
   def readAttributes[A <: BasicFileAttributes](path: Path,
                                                tpe: Class[A],
+                                               options: LinkOption*): A = readAttributes(path, tpe, options.toArray)
+  def readAttributes[A <: BasicFileAttributes](path: Path,
+                                               tpe: Class[A],
                                                options: Array[LinkOption]): A
 
   def readAttributes(path: Path,
                      attributes: String,
+                     options: LinkOption*): Map[String, Object] = readAttributes(path, attributes, options.toArray)
+
+  def readAttributes(path: Path,
+                     attributes: String,
                      options: Array[LinkOption]): Map[String, Object]
+
+  def setAttribute(path: Path,
+                   attribute: String,
+                   value: Object,
+                   options: LinkOption*): Unit = setAttribute(path, attribute, value, options.toArray)
 
   def setAttribute(path: Path,
                    attribute: String,

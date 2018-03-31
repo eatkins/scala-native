@@ -39,6 +39,7 @@ import scalanative.posix.sys.stat
 import scala.collection.immutable.{Map => SMap, Stream => SStream, Set => SSet}
 
 object Files {
+  private[this] lazy val tmpDir = new File(System.getProperty("java.io.tmpdir"))
 
   // def getFileStore(path: Path): FileStore
   // def probeContentType(path: Path): String
@@ -148,10 +149,11 @@ object Files {
       }
     }
 
-  private def createTempDirectory(dir: File,
+  private def createTempDirectory(_dir: File,
                                   prefix: String,
                                   attrs: Array[FileAttribute[_]]): Path = {
-    val temp = File.createTempFile(prefix, "", dir)
+                                    val dir = if (_dir == null) tmpDir else _dir
+    val temp = File.createTempFile(if (prefix == null) "" else prefix, "", dir)
     if (temp.delete() && temp.mkdir()) {
       val tempPath = temp.toPath()
       setAttributes(tempPath, attrs)
@@ -326,8 +328,9 @@ object Files {
     }
 
   def move(source: Path, target: Path, options: Array[CopyOption]): Path = {
-    copy(source, target, options)
-    delete(source)
+    Zone { implicit z =>
+      stdio.rename(toCString(source.toAbsolutePath().toString), toCString(target.toAbsolutePath().toString))
+    }
     target
   }
 

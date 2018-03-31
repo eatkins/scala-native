@@ -96,7 +96,7 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
   override def resolve(other: Path): Path =
     if (other.isAbsolute || path.isEmpty) other
     else if (other.toString.isEmpty) this
-    else new UnixPath(fs, rawPath + "/" + other.toString())
+    else new UnixPath(fs, rawPath + (if (!rawPath.endsWith("/")) "/" else "") + other.toString())
 
   override def resolve(other: String): Path =
     resolve(new UnixPath(fs, other))
@@ -131,7 +131,10 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
 
   override def toRealPath(options: Array[LinkOption]): Path = {
     if (options.contains(LinkOption.NOFOLLOW_LINKS)) toAbsolutePath()
-    else new UnixPath(fs, toFile().getCanonicalPath())
+    else {
+      val res = new UnixPath(fs, toFile().getCanonicalPath())
+      if (java.nio.file.Files.exists(res)) res else throw new java.io.IOException(s"File $res does not exist")
+    }
   }
 
   override def toFile(): File =

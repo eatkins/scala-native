@@ -10,6 +10,14 @@ int scalanative_platform_is_windows() {
 #endif
 }
 
+int scalanative_platform_is_mac() {
+#ifdef __APPLE__
+    return 1;
+#else
+    return 0;
+#endif
+}
+
 char *scalanative_windows_get_user_lang() {
 #ifdef _WIN32
     char *dest = malloc(9);
@@ -33,3 +41,8 @@ int scalanative_little_endian() {
     int n = 1;
     return (*(char *)&n);
 }
+
+#ifndef __APPLE__
+void scalanative_mac_osx_version(int *major, int *minor, int *patch) {
+}
+#endif

@@ -159,7 +159,7 @@ final class Matcher private[regex] (var _pattern: Pattern,
     val endIndex   = end(group)
 
     if (startIndex <= 0 && endIndex <= 0) {
-      null
+      ""
     } else {
       inputSequence.subSequence(startIndex, endIndex).toString
     }

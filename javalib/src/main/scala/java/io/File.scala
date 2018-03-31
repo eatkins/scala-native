@@ -569,9 +569,16 @@ object File {
 
   @throws(classOf[IOException])
   def createTempFile(prefix: String, suffix: String, directory: File): File =
-    if (prefix == null) throw new NullPointerException
-    else if (prefix.length < 3)
-      throw new IllegalArgumentException("Prefix string too short")
+    if (prefix == null) {
+      println("WTF Throwing npe")
+      throw new NullPointerException
+    }
+    /*
+     *else if (prefix.length < 3) {
+     *  println("WTF throwing illegal shit")
+     *  //throw new IllegalArgumentException("Prefix string too short")
+     *}
+     */
     else {
       val tmpDir       = Option(directory).getOrElse(tempDir())
       val newSuffix    = Option(suffix).getOrElse(".tmp")
