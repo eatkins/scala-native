@@ -31,7 +31,7 @@ trait Path extends Comparable[Path] with Iterable[Path] /*with Watchable*/ {
   def subpath(beginIndex: Int, endIndex: Int): Path
   def toAbsolutePath(): Path
   def toFile(): File
-  def toRealPath(options: Array[LinkOption]): Path
+  def toRealPath(options: LinkOption*): Path
   def toString(): String
   def toUri(): URI
 }

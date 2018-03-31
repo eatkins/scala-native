@@ -67,17 +67,17 @@ object FileChannel {
 
   def open(path: Path,
            options: Set[_ <: OpenOption],
-           attrs: Array[FileAttribute[_]]): FileChannel =
-    new FileChannelImpl(path, options, attrs)
+           attrs: FileAttribute[_]*): FileChannel =
+    new FileChannelImpl(path, options, attrs:_*)
 
-  def open(path: Path, options: Array[OpenOption]): FileChannel = {
+  def open(path: Path, options: OpenOption*): FileChannel = {
     var i   = 0
     val set = new HashSet[OpenOption]()
     while (i < options.length) {
       set.add(options(i))
       i += 1
     }
-    open(path, set, Array.empty)
+    open(path, set)
   }
 
 }

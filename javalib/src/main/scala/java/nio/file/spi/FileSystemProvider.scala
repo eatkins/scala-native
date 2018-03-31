@@ -36,11 +36,11 @@ abstract class FileSystemProvider protected () {
   def newFileSystem(path: Path, env: Map[String, _]): FileSystem =
     throw new UnsupportedOperationException()
 
-  def newInputStream(path: Path, _options: Array[OpenOption]): InputStream = {
+  def newInputStream(path: Path, _options: OpenOption*): InputStream = {
     val options =
-      if (_options.isEmpty) Array[OpenOption](StandardOpenOption.READ)
+      if (_options.isEmpty) Seq[OpenOption](StandardOpenOption.READ)
       else _options
-    val channel = Files.newByteChannel(path, options)
+    val channel = Files.newByteChannel(path, options:_*)
     new InputStream {
       private val buffer = ByteBuffer.allocate(1)
       override def read(): Int = {
@@ -54,14 +54,14 @@ abstract class FileSystemProvider protected () {
     }
   }
 
-  def newOutputStream(path: Path, _options: Array[OpenOption]): OutputStream = {
+  def newOutputStream(path: Path, _options: OpenOption*): OutputStream = {
     val options =
       if (_options.isEmpty)
-        Array[OpenOption](StandardOpenOption.CREATE,
+        Seq[OpenOption](StandardOpenOption.CREATE,
                           StandardOpenOption.TRUNCATE_EXISTING,
                           StandardOpenOption.WRITE)
       else _options :+ StandardOpenOption.WRITE
-    val channel = Files.newByteChannel(path, options)
+    val channel = Files.newByteChannel(path, options:_*)
     new OutputStream {
       private val buffer = ByteBuffer.allocate(1)
       override def write(b: Int): Unit = {
@@ -76,30 +76,30 @@ abstract class FileSystemProvider protected () {
 
   def newFileChannel(path: Path,
                      options: Set[_ <: OpenOption],
-                     attrs: Array[FileAttribute[_]]): FileChannel =
+                     attrs: FileAttribute[_]*): FileChannel =
     throw new UnsupportedOperationException
 
   def newAsynchronousFileChannel(
       path: Path,
       options: Set[_ <: OpenOption],
       executor: ExecutorService,
-      attrs: Array[FileAttribute[_]]): AsynchronousFileChannel =
+      attrs: FileAttribute[_]*): AsynchronousFileChannel =
     throw new UnsupportedOperationException
 
   def newByteChannel(path: Path,
                      options: Set[_ <: OpenOption],
-                     attrs: Array[FileAttribute[_]]): SeekableByteChannel =
-    FileChannel.open(path, options, attrs)
+                     attrs: FileAttribute[_]*): SeekableByteChannel =
+    FileChannel.open(path, options, attrs:_*)
 
   def newDirectoryStream(
       dir: Path,
       filter: DirectoryStream.Filter[_ >: Path]): DirectoryStream[Path]
 
-  def createDirectory(dir: Path, attrs: Array[FileAttribute[_]]): Unit
+  def createDirectory(dir: Path, attrs: FileAttribute[_]*): Unit
 
   def createSymbolicLink(link: Path,
                          target: Path,
-                         attrs: Array[FileAttribute[_]]): Unit =
+                         attrs: FileAttribute[_]*): Unit =
     throw new UnsupportedOperationException()
 
   def createLink(link: Path, existing: Path): Unit =
@@ -116,9 +116,9 @@ abstract class FileSystemProvider protected () {
   def readSymbolicLink(link: Path): Path =
     throw new UnsupportedOperationException
 
-  def copy(source: Path, target: Path, options: Array[CopyOption]): Unit
+  def copy(source: Path, target: Path, options: CopyOption*): Unit
 
-  def move(source: Path, target: Path, options: Array[CopyOption]): Unit
+  def move(source: Path, target: Path, options: CopyOption*): Unit
 
   def isSameFile(path: Path, path2: Path): Boolean
 
@@ -129,20 +129,20 @@ abstract class FileSystemProvider protected () {
   def getFileAttributeView[V <: FileAttributeView](
       path: Path,
       tpe: Class[V],
-      options: Array[LinkOption]): V
+      options: LinkOption*): V
 
   def readAttributes[A <: BasicFileAttributes](path: Path,
                                                tpe: Class[A],
-                                               options: Array[LinkOption]): A
+                                               options: LinkOption*): A
 
   def readAttributes(path: Path,
                      attributes: String,
-                     options: Array[LinkOption]): Map[String, Object]
+                     options: LinkOption*): Map[String, Object]
 
   def setAttribute(path: Path,
                    attribute: String,
                    value: Object,
-                   options: Array[LinkOption]): Unit
+                   options: LinkOption*): Unit
 
 }
 
