@@ -17,12 +17,12 @@ import java.util.Set
 
 final class FileChannelImpl(path: Path,
                             options: Set[_ <: OpenOption],
-                            attrs: FileAttribute[_]*)
+                            attrs: Array[FileAttribute[_]])
     extends FileChannel {
 
   private val deleteOnClose =
     options.contains(StandardOpenOption.DELETE_ON_CLOSE)
-  private val raf = FileChannelImpl.getRAF(path, options, attrs:_*)
+  private val raf = FileChannelImpl.getRAF(path, options, attrs)
 
   // override def force(metadata: Boolean): Unit
   // override def tryLock(position: Long, size: Long, shared: Boolean): FileLock
@@ -138,7 +138,7 @@ final class FileChannelImpl(path: Path,
 private object FileChannelImpl {
   def getRAF(path: Path,
              options: Set[_ <: OpenOption],
-             attrs: FileAttribute[_]*): RandomAccessFile = {
+             attrs: Array[FileAttribute[_]]): RandomAccessFile = {
     import StandardOpenOption._
 
     if (options.contains(APPEND) && options.contains(TRUNCATE_EXISTING)) {
@@ -155,11 +155,11 @@ private object FileChannelImpl {
     val mode = new StringBuilder("r")
     if (writing) mode.append("w")
 
-    if (!Files.exists(path)) {
+    if (!Files.exists(path, Array.empty)) {
       if (!options.contains(CREATE) && !options.contains(CREATE_NEW)) {
         throw new NoSuchFileException(path.toString)
       } else if (writing) {
-        Files.createFile(path, attrs:_*)
+        Files.createFile(path, attrs)
       }
     } else if (options.contains(CREATE_NEW)) {
       throw new FileAlreadyExistsException(path.toString)

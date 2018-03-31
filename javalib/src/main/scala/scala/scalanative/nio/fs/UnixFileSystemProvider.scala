@@ -55,8 +55,8 @@ class UnixFileSystemProvider extends FileSystemProvider {
 
   override def newFileChannel(path: Path,
                               options: Set[_ <: OpenOption],
-                              attrs: FileAttribute[_]*): FileChannel =
-    FileChannel.open(path, options, attrs:_*)
+                              attrs: Array[FileAttribute[_]]): FileChannel =
+    FileChannel.open(path, options, attrs)
 
   override def newDirectoryStream(
       dir: Path,
@@ -64,13 +64,13 @@ class UnixFileSystemProvider extends FileSystemProvider {
     new DirectoryStreamImpl[Path](Files.list(dir), filter)
 
   override def createDirectory(dir: Path,
-                               attrs: FileAttribute[_]*): Unit =
-    Files.createDirectory(dir, attrs:_*)
+                               attrs: Array[FileAttribute[_]]): Unit =
+    Files.createDirectory(dir, attrs)
 
   override def createSymbolicLink(link: Path,
                                   target: Path,
-                                  attrs: FileAttribute[_]*): Unit =
-    Files.createSymbolicLink(link, target, attrs:_*)
+                                  attrs: Array[FileAttribute[_]]): Unit =
+    Files.createSymbolicLink(link, target, attrs)
 
   override def createLink(link: Path, existing: Path): Unit =
     Files.createLink(link, existing)
@@ -83,13 +83,13 @@ class UnixFileSystemProvider extends FileSystemProvider {
 
   override def copy(source: Path,
                     target: Path,
-                    options: CopyOption*): Unit =
-    Files.copy(source, target, options:_*)
+                    options: Array[CopyOption]): Unit =
+    Files.copy(source, target, options)
 
   override def move(source: Path,
                     target: Path,
-                    options: CopyOption*): Unit =
-    Files.move(source, target, options:_*)
+                    options: Array[CopyOption]): Unit =
+    Files.move(source, target, options)
 
   override def isSameFile(path: Path, path2: Path): Boolean =
     Files.isSameFile(path, path2)
@@ -112,28 +112,28 @@ class UnixFileSystemProvider extends FileSystemProvider {
   override def getFileAttributeView[V <: FileAttributeView](
       path: Path,
       tpe: Class[V],
-      options: LinkOption*): V =
+      options: Array[LinkOption]): V =
     (knownFileAttributeViews.get(tpe) match {
       case None     => null
-      case Some(fn) => fn(path, options:_*)
+      case Some(fn) => fn(path, options)
     }).asInstanceOf[V]
 
   override def readAttributes[A <: BasicFileAttributes](
       path: Path,
       tpe: Class[A],
-      options: LinkOption*): A =
-    Files.readAttributes(path, tpe, options:_*)
+      options: Array[LinkOption]): A =
+    Files.readAttributes(path, tpe, options)
 
   override def readAttributes(path: Path,
                               attributes: String,
-                              options: LinkOption*): Map[String, Object] =
-    Files.readAttributes(path, attributes, options:_*)
+                              options: Array[LinkOption]): Map[String, Object] =
+    Files.readAttributes(path, attributes, options)
 
   override def setAttribute(path: Path,
                             attribute: String,
                             value: Object,
-                            options: LinkOption*): Unit =
-    Files.setAttribute(path, attribute, value, options:_*)
+                            options: Array[LinkOption]): Unit =
+    Files.setAttribute(path, attribute, value, options)
 
   private def getUserDir(): String = {
     val buff = stackalloc[CChar](4096)
@@ -143,17 +143,17 @@ class UnixFileSystemProvider extends FileSystemProvider {
 
   private val knownFileAttributeViews
     : SMap[Class[_ <: FileAttributeView],
-           (Path, LinkOption*) => FileAttributeView] =
+           (Path, Array[LinkOption]) => FileAttributeView] =
     SMap(
       classOf[BasicFileAttributeView] -> (
           (p,
-           l) => new NativePosixFileAttributeView(p, l:_*)),
+           l) => new NativePosixFileAttributeView(p, l)),
       classOf[PosixFileAttributeView] -> (
           (p,
-           l) => new NativePosixFileAttributeView(p, l:_*)),
+           l) => new NativePosixFileAttributeView(p, l)),
       classOf[FileOwnerAttributeView] -> (
           (p,
-           l) => new NativePosixFileAttributeView(p, l:_*))
+           l) => new NativePosixFileAttributeView(p, l))
     )
 
 }
