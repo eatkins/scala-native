@@ -126,15 +126,24 @@ object ScalaNativePluginInternal {
         .withMode(mode)
         .withLinkStubs(nativeLinkStubs.value)
     },
-    nativeLink := {
-      val logger  = streams.value.log.toLogger
-      val config  = nativeConfig.value.withLogger(logger)
-      val outpath = (artifactPath in nativeLink).value
+    nativeLink := Def.taskDyn {
+      if (!skipNativeBuild.value) {
+        val logger  = streams.value.log.toLogger
+        val config  = nativeConfig.value.withLogger(logger)
+        val outpath = (artifactPath in nativeLink).value
+        val mode    = (nativeMode in Compile).value
 
-      interceptBuildException(Build.build(config, outpath.toPath))
-
-      outpath
-    },
+        Def.task {
+          val c = config.withMode(
+            if (mode == "debug") build.Mode.Debug else build.Mode.Release)
+          interceptBuildException(Build.build(c, outpath.toPath))
+          outpath
+        }
+      } else {
+        val outpath = (artifactPath in nativeLink).value
+        Def.task(outpath)
+      }
+    }.value,
     run := {
       val env    = (envVars in run).value.toSeq
       val logger = streams.value.log

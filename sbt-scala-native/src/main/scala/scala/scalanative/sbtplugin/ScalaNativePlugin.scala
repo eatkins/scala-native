@@ -39,13 +39,16 @@ object ScalaNativePlugin extends AutoPlugin {
 
     val nativeGC =
       settingKey[String]("GC choice, either \"none\", \"boehm\" or \"immix\".")
+
+    val skipNativeBuild =
+      settingKey[Boolean]("skip native build")
   }
 
   @deprecated("use autoImport instead", "0.3.7")
   val AutoImport = autoImport
 
   override def globalSettings: Seq[Setting[_]] =
-    ScalaNativePluginInternal.scalaNativeGlobalSettings
+    ScalaNativePluginInternal.scalaNativeGlobalSettings :+ (autoImport.skipNativeBuild in Global := false)
 
   override def projectSettings: Seq[Setting[_]] =
     ScalaNativePluginInternal.scalaNativeProjectSettings
