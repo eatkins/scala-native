@@ -76,7 +76,7 @@ object Files {
 
   def copy(source: Path, target: Path, options: Array[CopyOption]): Path = {
     if (isDirectory(source, Array.empty)) {
-      copyDir(source, target, options)
+      createDirectory(target, Array.empty)
     } else {
       val in = newInputStream(source, Array.empty)
       try copy(in, target, options)
@@ -89,10 +89,10 @@ object Files {
     if (options.contains(StandardCopyOption.REPLACE_EXISTING)) {
       deleteRecursive(target)
     }
-    createDirectory(target, Array.empty)
+    createDirectory(target, Array.empty) 
     list(source).iterator.asScala.foreach {
-      case p if isDirectory(p, Array.empty) => copyDir(p, target.resolve(source.relativize(p)), Array.empty)
-      case p => println(p); println(target.resolve(source.relativize(p))); copy(p, target.resolve(source.relativize(p)), Array.empty[CopyOption])
+      case p if isDirectory(p, Array.empty) => copyDir(p, target.resolve(source.relativize(p)), options)
+      case p => copy(p, target.resolve(source.relativize(p)), options)
     }
   }
 
@@ -384,7 +384,8 @@ object Files {
         stdio.rename(toCString(source.toAbsolutePath().toString), toCString(target.toAbsolutePath().toString))
       }
     } else {
-      copy(source, target, options)
+      if (isDirectory(source, Array.empty)) copyDir(source, target, options)
+      else copy(source, target, options)
       deleteRecursive(source)
     }
     target

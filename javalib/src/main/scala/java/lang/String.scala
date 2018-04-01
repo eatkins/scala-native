@@ -740,21 +740,25 @@ final class _String()
     case _ => false
   }
   def split(expr: _String, max: Int): Array[String] = expr match {
-    case e if e.length == 1 && !isRegexMeta(e.value(0)) =>
-      val c = e.value(0)
+    case e if e.length == 1 && !isRegexMeta(e.charAt(0)) =>
+      val c = e.charAt(0)
       var i = 0
       var j = 0
       val res = new scala.collection.mutable.ArrayBuffer[String]
-      while (j < value.length) {
-        if (value(j) == c) {
+      while (j < count) {
+        if (charAt(j) == c) {
           res += substring(i, j)
-          j = j + 1
+          j += 1
+          while (j < count && charAt(j) == c) {
+            res += ""
+            j += 1
+          }
           i = j
         } else {
           j += 1
         }
       }
-      if (i < value.length) res += substring(i, value.length)
+      if (i < count) res += substring(i, count)
       res.toArray
     case _ => Pattern.compile(expr).split(this, max)
   }
