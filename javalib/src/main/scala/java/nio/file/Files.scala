@@ -33,8 +33,9 @@ import java.util.{
 import java.util.stream.{Stream, WrappedScalaStream}
 
 import scalanative.native._
-import scalanative.posix.{limits, unistd}
+import scalanative.posix.{dirent, limits, unistd}, dirent._
 import scalanative.posix.sys.stat
+import stdlib._, stdio._, string._
 
 import scala.collection.immutable.{Map => SMap, Stream => SStream, Set => SSet}
 
@@ -325,14 +326,39 @@ object Files {
   def lines(path: Path, cs: Charset): Stream[String] =
     newBufferedReader(path, cs).lines(true)
 
-  private def _list(dir: Path): SStream[Path] =
-    dir.toFile().list().toStream.map(dir.resolve)
+  private def _list(path: Path): scala.Iterator[Path] = new scala.Iterator[Path] {
+    class Wrapped(val ptr: Ptr[Void])
+    var dir = Zone(implicit z => new Wrapped(opendir(toCString(path.toAbsolutePath.toString)))).ptr
+    val elem: Ptr[dirent]   = stdlib.malloc(sizeof[dirent]).cast[Ptr[dirent]]
+    var _hasNext = false
+    def hasNext = _hasNext
+    def getNext(): Unit = do {
+      _hasNext = readdir(dir, elem) == 0
+      if (!_hasNext) {
+        closedir(dir)
+        stdlib.free(elem.cast[Ptr[Byte]])
+        return
+      } else if (!elem._2._1 == '.') {
+        // java doesn't list '.' and '..', we filter them out.
+        val nextByte = !(elem._2._2)
+        if (nextByte == 0 || (nextByte == '.' && (!(elem._2._3) == 0))) {
+          _hasNext = false
+        }
+      }
+    } while (!_hasNext)
+    getNext()
+    def next: Path = {
+      val res = if (_hasNext) fromCString(elem._2.asInstanceOf[CString]) else throw new NoSuchElementException("next on empty iterator")
+      getNext()
+      path.resolve(res)
+    }
+  }
 
   def list(dir: Path): Stream[Path] =
     if (!isDirectory(dir, Array.empty)) {
       throw new NotDirectoryException(dir.toString)
     } else {
-      new WrappedScalaStream(_list(dir), None)
+      new WrappedScalaStream(_list(dir).toStream, None)
     }
 
   def move(source: Path, target: Path, options: Array[CopyOption]): Path = {
@@ -536,7 +562,7 @@ object Files {
     if (!isDirectory(start, Array.empty))
       throw new NotDirectoryException(start.toString)
     else {
-      start #:: _list(start).flatMap {
+      start #:: _list(start).toStream.flatMap {
         case p
             if isSymbolicLink(p) && options.contains(
               FileVisitOption.FOLLOW_LINKS) =>
