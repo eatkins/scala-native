@@ -37,6 +37,7 @@ import scalanative.posix.{dirent, limits, unistd}, dirent._
 import scalanative.posix.sys.stat
 import stdlib._, stdio._, string._
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.{Map => SMap, Stream => SStream, Set => SSet}
 
 object Files {
@@ -202,6 +203,15 @@ object Files {
                      attrs: Array[FileAttribute[_]]): Path =
     createTempFile(null: File, prefix, suffix, attrs)
 
+  private def deleteRecursive(path: Path): Unit = {
+    if (isDirectory(path, Array.empty)) {
+      list(path).iterator.asScala.foreach { p =>
+        if (isDirectory(p, Array.empty)) deleteRecursive(p)
+        else delete(p)
+      }
+      delete(path)
+    }
+  }
   def delete(path: Path): Unit =
     if (!exists(path, Array.empty)) {
       throw new NoSuchFileException(path.toString)
