@@ -733,11 +733,31 @@ final class _String()
   def replaceFirst(expr: _String, substitute: _String): _String =
     Pattern.compile(expr).matcher(this).replaceFirst(substitute)
 
-  def split(expr: _String): Array[String] =
-    Pattern.compile(expr).split(this)
+  def split(expr: _String): Array[String] = split(expr, 0)
 
-  def split(expr: _String, max: Int): Array[String] =
-    Pattern.compile(expr).split(this, max)
+  private def isRegexMeta(c: Char) = c match {
+    case '.' | '$' | '|' | '(' | ')' | '[' | '{' | '^' | '?' | '*' | '+' | '\\' => true
+    case _ => false
+  }
+  def split(expr: _String, max: Int): Array[String] = expr match {
+    case e if e.length == 1 && !isRegexMeta(e.value(0)) =>
+      val c = e.value(0)
+      var i = 0
+      var j = 0
+      val res = new scala.collection.mutable.ArrayBuffer[String]
+      while (j < value.length) {
+        if (value(j) == c) {
+          res += substring(i, j)
+          j = j + 1
+          i = j
+        } else {
+          j += 1
+        }
+      }
+      if (i < value.length) res += substring(i, value.length)
+      res.toArray
+    case _ => Pattern.compile(expr).split(this, max)
+  }
 
   def subSequence(start: Int, end: Int): CharSequence =
     substring(start, end)
