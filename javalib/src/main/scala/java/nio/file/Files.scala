@@ -86,7 +86,14 @@ object Files {
   }
 
   private def copyDir(source: Path, target: Path, options: Array[CopyOption]): Unit = {
-
+    if (options.contains(StandardCopyOption.REPLACE_EXISTING)) {
+      deleteRecursive(target)
+    }
+    createDirectory(target, Array.empty)
+    list(source).iterator.asScala.foreach {
+      case p if isDirectory(p, Array.empty) => copyDir(p, target.resolve(source.relativize(p)), Array.empty)
+      case p => println(p); println(target.resolve(source.relativize(p))); copy(p, target.resolve(source.relativize(p)), Array.empty[CopyOption])
+    }
   }
 
   private def copy(in: InputStream, out: OutputStream): Long = {
@@ -207,10 +214,10 @@ object Files {
     if (isDirectory(path, Array.empty)) {
       list(path).iterator.asScala.foreach { p =>
         if (isDirectory(p, Array.empty)) deleteRecursive(p)
-        else delete(p)
+        else deleteIfExists(p)
       }
-      delete(path)
     }
+    deleteIfExists(path)
   }
   def delete(path: Path): Unit =
     if (!exists(path, Array.empty)) {
@@ -372,8 +379,13 @@ object Files {
     }
 
   def move(source: Path, target: Path, options: Array[CopyOption]): Path = {
-    Zone { implicit z =>
-      stdio.rename(toCString(source.toAbsolutePath().toString), toCString(target.toAbsolutePath().toString))
+    if (options.contains(StandardCopyOption.ATOMIC_MOVE)) {
+      Zone { implicit z =>
+        stdio.rename(toCString(source.toAbsolutePath().toString), toCString(target.toAbsolutePath().toString))
+      }
+    } else {
+      copy(source, target, options)
+      deleteRecursive(source)
     }
     target
   }
