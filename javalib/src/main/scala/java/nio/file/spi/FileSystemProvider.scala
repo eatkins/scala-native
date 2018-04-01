@@ -6,7 +6,7 @@ import java.util.concurrent.ExecutorService
 
 import java.net.URI
 
-import java.io.{FileInputStream, InputStream, OutputStream}
+import java.io.{BufferedInputStream, FileInputStream, InputStream, OutputStream}
 import java.nio.ByteBuffer
 import java.nio.file.attribute.{
   BasicFileAttributes,
@@ -41,8 +41,12 @@ abstract class FileSystemProvider protected () {
       if (_options.isEmpty) Array[OpenOption](StandardOpenOption.READ)
       else _options
     val channel = Files.newByteChannel(path, options)
-    new InputStream {
+    new BufferedInputStream(new InputStream {
       private val buffer = ByteBuffer.allocate(1)
+      override def read(buf: Array[Byte], offset: Int, count: Int): Int = {
+        val buffer = ByteBuffer.wrap(buf, offset, count)
+        channel.read(buffer)
+      }
       override def read(): Int = {
         buffer.position(0)
         val read = channel.read(buffer)
@@ -51,7 +55,7 @@ abstract class FileSystemProvider protected () {
       }
       override def close(): Unit =
         channel.close()
-    }
+    })
   }
 
   def newOutputStream(path: Path, _options: Array[OpenOption]): OutputStream = {
@@ -67,6 +71,11 @@ abstract class FileSystemProvider protected () {
       override def write(b: Int): Unit = {
         buffer.position(0)
         buffer.put(0, b.toByte)
+        channel.write(buffer)
+      }
+      override def write(b: Array[Byte], off: Int, len: Int): Unit = {
+        val buffer = ByteBuffer.wrap(b)
+        buffer.limit(len)
         channel.write(buffer)
       }
       override def close(): Unit =

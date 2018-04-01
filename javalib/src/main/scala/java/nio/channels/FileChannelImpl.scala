@@ -70,9 +70,9 @@ final class FileChannelImpl(path: Path,
   override def read(buffer: ByteBuffer, pos: Long): Int = {
     ensureOpen()
     position(pos)
-    val dst = new Array[Byte](1)
+    val dst = new Array[Byte](buffer.capacity)
     val nb  = raf.read(dst)
-    if (nb > 0) buffer.put(dst)
+    if (nb > 0) buffer.put(dst, 0, nb)
     nb
   }
 
@@ -123,9 +123,10 @@ final class FileChannelImpl(path: Path,
   override def write(buffer: ByteBuffer, pos: Long): Int = {
     ensureOpen()
     position(pos)
-    val toWrite = buffer.get()
-    raf.write(toWrite)
-    1
+    //val toWrite = buffer.get()
+    val len = buffer.limit()
+    raf.write(buffer.array(), 0, len)
+    len
   }
 
   override def write(src: ByteBuffer): Int =
