@@ -79,7 +79,7 @@ object Driver {
   /** Create driver with default pipeline for this configuration. */
   def default(mode: Mode): Driver = {
     val optPasses = mode match {
-      case Mode.Debug   => fastOptPasses
+      case Mode.Debug   => fullOptPasses
       case Mode.Release => fullOptPasses
     }
     empty.withPasses(injectionPasses ++ optPasses ++ loweringPasses)

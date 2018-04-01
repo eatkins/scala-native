@@ -57,7 +57,7 @@ object CodeGen {
       }
 
       config.mode match {
-        case build.Mode.Debug   => debug()
+        case build.Mode.Debug   => release()
         case build.Mode.Release => release()
       }
     }

@@ -131,7 +131,7 @@ object ScalaNativePluginInternal {
       val config  = nativeConfig.value.withLogger(logger)
       val outpath = (artifactPath in nativeLink).value
 
-      interceptBuildException(Build.build(config, outpath.toPath))
+      interceptBuildException(Build.build(config.withMode(build.Mode.Release), outpath.toPath))
 
       outpath
     },
