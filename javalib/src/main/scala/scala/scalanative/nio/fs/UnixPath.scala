@@ -126,8 +126,9 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
     }
   }
 
-  override def toAbsolutePath(): Path =
-    new UnixPath(fs, toFile().getAbsolutePath())
+  override def toAbsolutePath(): Path = {
+    if (File.isAbsolute(path)) this else new UnixPath(fs, toFile().getAbsolutePath())
+  }
 
   override def toRealPath(options: Array[LinkOption]): Path = {
     if (options.contains(LinkOption.NOFOLLOW_LINKS)) toAbsolutePath()
