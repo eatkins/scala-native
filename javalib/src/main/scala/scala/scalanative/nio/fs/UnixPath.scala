@@ -155,12 +155,13 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
 
   override def iterator(): Iterator[Path] =
     new Iterator[Path] {
+      val parts = path.split("/")
       private var i: Int              = 0
       override def remove(): Unit     = throw new UnsupportedOperationException()
-      override def hasNext(): Boolean = i < getNameCount()
+      override def hasNext(): Boolean = i < parts.size
       override def next(): Path =
         if (hasNext) {
-          val name = getName(i)
+          val name = new UnixPath(fs, parts(i))
           i += 1
           name
         } else {
