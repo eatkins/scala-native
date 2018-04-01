@@ -73,10 +73,18 @@ object Files {
   }
 
   def copy(source: Path, target: Path, options: Array[CopyOption]): Path = {
-    val in = newInputStream(source, Array.empty)
-    try copy(in, target, options)
-    finally in.close()
+    if (isDirectory(source, Array.empty)) {
+      copyDir(source, target, options)
+    } else {
+      val in = newInputStream(source, Array.empty)
+      try copy(in, target, options)
+      finally in.close()
+    }
     target
+  }
+
+  private def copyDir(source: Path, target: Path, options: Array[CopyOption]): Unit = {
+
   }
 
   private def copy(in: InputStream, out: OutputStream): Long = {

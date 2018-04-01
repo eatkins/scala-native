@@ -2,7 +2,7 @@ package scala.scalanative.nio.fs
 
 import java.io.File
 import java.net.URI
-import java.nio.file.{FileSystem, LinkOption, Path, WatchEvent, WatchKey}
+import java.nio.file.{FileSystem, Files, LinkOption, Path, WatchEvent, WatchKey}
 import java.util.Iterator
 
 import scala.collection.mutable.UnrolledBuffer
@@ -132,8 +132,10 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
   override def toRealPath(options: Array[LinkOption]): Path = {
     if (options.contains(LinkOption.NOFOLLOW_LINKS)) toAbsolutePath()
     else {
-      val res = new UnixPath(fs, toFile().getCanonicalPath())
-      if (java.nio.file.Files.exists(res)) res else throw new java.io.IOException(s"File $res does not exist")
+      new UnixPath(fs, toFile().getCanonicalPath()) match {
+        case p if Files.exists(p, Array.empty) => p
+        case p => throw new java.io.IOException(s"File $p does not exist")
+      }
     }
   }
 
