@@ -83,13 +83,13 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
   override def readAttributes(): BasicFileAttributes =
     attributes
 
-  private lazy val attributes =
+  private def attributes =
     new PosixFileAttributes {
       private[this] val s = Zone(implicit z => new Stat(getStat()))
-      private def fileStat()(implicit z: Zone) = s
+      private def fileStat() = s
         //getStat()
 
-      private def fileMode()(implicit z: Zone) =
+      private def fileMode() =
         fileStat().st_mode
 
       private def filePasswd()(implicit z: Zone) =
@@ -99,42 +99,28 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
         getGroup(fileStat().st_gid)
 
       override def fileKey =
-        Zone { implicit z =>
           (fileStat().st_ino).asInstanceOf[Object]
-        }
 
       override def isDirectory =
-        Zone { implicit z =>
           stat.S_ISDIR(fileMode()) == 1
-        }
 
       override def isRegularFile =
-        Zone { implicit z =>
           stat.S_ISREG(fileMode()) == 1
-        }
 
       override def isSymbolicLink =
-        Zone { implicit z =>
           stat.S_ISLNK(fileMode()) == 1
-        }
 
       override def isOther =
         !isDirectory && !isRegularFile && !isSymbolicLink
 
       override def lastAccessTime =
-        Zone { implicit z =>
           FileTime.from(fileStat().st_atime, TimeUnit.SECONDS)
-        }
 
       override def lastModifiedTime =
-        Zone { implicit z =>
           FileTime.from(fileStat().st_mtime, TimeUnit.SECONDS)
-        }
 
       override def creationTime =
-        Zone { implicit z =>
           FileTime.from(fileStat().st_ctime, TimeUnit.SECONDS)
-        }
 
       override def group = new GroupPrincipal {
         override val getName =
@@ -151,7 +137,7 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
       }
 
       override def permissions =
-        Zone { implicit z =>
+        { 
           val set = new HashSet[PosixFilePermission]
           NativePosixFileAttributeView.permMap.foreach {
             case (flag, value) =>
@@ -161,9 +147,7 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
         }
 
       override def size =
-        Zone { implicit z =>
           fileStat().st_size
-        }
     }
 
   override def asMap(): HashMap[String, Object] = {
