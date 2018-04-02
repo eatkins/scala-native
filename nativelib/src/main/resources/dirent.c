@@ -57,11 +57,11 @@ int scalanative_readdir(DIR *dirp, struct scalanative_dirent *buf) {
     struct dirent orig_buf;
     struct dirent *result = NULL;
     int res = readdir_r(dirp, &orig_buf, &result);
-    if (res == 0) {
-        scalanative_dirent_init(&orig_buf, buf);
+    if (res == 0 && result) {
+        scalanative_dirent_init(result, buf);
         return 0;
     } else {
-        return res;
+        return 1;
     }
 }
 

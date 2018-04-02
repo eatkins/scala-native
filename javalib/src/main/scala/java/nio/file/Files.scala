@@ -346,7 +346,7 @@ object Files {
   private case class Dirent(basePath: Path, name: String, tpe: CShort) {
     lazy val path = basePath.resolve(name)
   }
-  private def _list(path: Path): scala.Iterator[Path] = new scala.Iterator[Path] {
+  private def _list(path: Path): scala.Iterator[Dirent] = new scala.Iterator[Dirent] {
     class Wrapped(val ptr: Ptr[Void])
     var dir = Zone(implicit z => new Wrapped(opendir(toCString(path.toAbsolutePath.toString)))).ptr
     val elem: Ptr[dirent]   = stdlib.malloc(sizeof[dirent]).cast[Ptr[dirent]]
@@ -367,10 +367,10 @@ object Files {
       }
     } while (!_hasNext)
     getNext()
-    def next: Path = {
+    def next: Dirent = {
       val res = if (_hasNext) Dirent(path, fromCString(elem._2.asInstanceOf[CString]), !elem._3) else throw new NoSuchElementException("next on empty iterator")
       getNext()
-      res.path
+      res
     }
   }
 
@@ -378,8 +378,8 @@ object Files {
     if (!isDirectory(dir, Array.empty)) {
       throw new NotDirectoryException(dir.toString)
     } else {
-      //new WrappedScalaStream(_list(dir).toStream.map(d => d.path.resolve(d.name)), None)
-      new WrappedScalaStream(_list(dir).toStream, None)
+      new WrappedScalaStream(_list(dir).toStream.map(_.path), None)
+      //new WrappedScalaStream(_list(dir).toStream, None)
     }
 
   def move(source: Path, target: Path, options: Array[CopyOption]): Path = {
@@ -585,8 +585,7 @@ object Files {
                    maxDepth: Int,
                    currentDepth: Int,
                    options: Array[FileVisitOption],
-                   visited: SSet[Path]): SStream[Path] =
-                     println(s"WTF walking $start")
+                   visited: SSet[Path]): SStream[Path] = {
     if (!isDirectory(start, Array.empty))
       throw new NotDirectoryException(start.toString)
     else {
@@ -594,20 +593,20 @@ object Files {
         case p
           if p.tpe == DT_LNK && options.contains(
               FileVisitOption.FOLLOW_LINKS) =>
-              val path = Paths.get(p.name, Array.empty)
           val newVisited = visited + p.path
           val target     = readSymbolicLink(p.path)
           if (newVisited.contains(target))
             throw new FileSystemLoopException(p.path.toString)
           else walk(p.path, maxDepth, currentDepth + 1, options, newVisited)
         case p
-            //if p.tpe == DT_DIR && currentDepth < maxDepth =>
-            if Files.isDirectory(p, Array.empty) && currentDepth < maxDepth =>
+            if p.tpe == DT_DIR && currentDepth < maxDepth =>
+            //if Files.isDirectory(p, Array.empty) && currentDepth < maxDepth =>
           val newVisited =
-            if (options.contains(FileVisitOption.FOLLOW_LINKS)) visited + p
+            if (options.contains(FileVisitOption.FOLLOW_LINKS)) visited + p.path
             else visited
-          walk(p, maxDepth, currentDepth + 1, options, newVisited)
-        case p => p #:: SStream.Empty
+          walk(p.path, maxDepth, currentDepth + 1, options, newVisited)
+        case p =>
+          p.path #:: SStream.Empty
       }
     }
   }
