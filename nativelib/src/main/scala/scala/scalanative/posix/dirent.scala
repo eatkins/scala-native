@@ -8,7 +8,7 @@ object dirent {
 
   type _256   = Digit[_2, Digit[_5, _6]]
   type DIR    = Void
-  type dirent = CStruct2[CUnsignedLongLong, CArray[CChar, _256]]
+  type dirent = CStruct5[CUnsignedLongLong, CArray[CChar, _256], CShort, CShort, CShort]
 
   @name("scalanative_opendir")
   def opendir(name: CString): Ptr[DIR] = extern
@@ -18,4 +18,23 @@ object dirent {
 
   @name("scalanative_closedir")
   def closedir(dirp: Ptr[DIR]): CInt = extern
+
+  @name("scalanative_dt_unknown")
+  def DT_UNKNOWN(): CInt = extern
+  @name("scalanative_dt_fifo")
+  def DT_FIFO(): CInt = extern
+  @name("scalanative_dt_chr")
+  def DT_CHR(): CInt = extern
+  @name("scalanatve_dt_dir")
+  def DT_DIR(): CInt = extern
+  @name("scalanatve_dt_blk")
+  def DT_BLK(): CInt = extern
+  @name("scalanatve_dt_reg")
+  def DT_REG(): CInt = extern
+  @name("scalanatve_dt_lnk")
+  def DT_LNK(): CInt = extern
+  @name("scalanatve_dt_sock")
+  def DT_SOCK(): CInt = extern
+  @name("scalanatve_dt_wht")
+  def DT_WHT(): CInt = extern
 }
