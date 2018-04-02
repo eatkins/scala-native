@@ -112,7 +112,7 @@ private[scalanative] object LLVM {
   def compile(config: Config, llPaths: Seq[Path]): Seq[Path] = {
     val optimizationOpt =
       config.mode match {
-        case Mode.Debug   => "-O2"
+        case Mode.Debug   => "-O0"
         case Mode.Release => "-O2"
       }
     val opts = optimizationOpt +: config.compileOptions
