@@ -7,13 +7,29 @@ import java.nio.file.attribute._
 import java.io.IOException
 
 import scalanative.native._
-import scalanative.posix.{grp, pwd, unistd, utime}
+import scalanative.posix.{grp, pwd, unistd, time, utime}
 import scalanative.posix.sys.stat
 
 final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
     extends PosixFileAttributeView
     with FileOwnerAttributeView {
-
+      case class Stat(
+        st_dev: stat.dev_t,
+        st_rdev: stat.dev_t,
+        st_ino: stat.ino_t,
+        st_uid: stat.uid_t,
+        st_gid: stat.gid_t,
+        st_size: unistd.off_t,
+        st_atime: time.time_t,
+        st_mtime: time.time_t,
+        st_ctime: time.time_t,
+        st_blocks: stat.blkcnt_t,
+        st_blksize: stat.blksize_t,
+        st_nlink: stat.nlink_t,
+        st_mode: stat.mode_t
+      ) {
+        def this(p: Ptr[stat.stat]) = this(!p._1, !p._2, !p._3, !p._4, !p._5, !p._6, !p._7, !p._8, !p._9, !p._10, !p._11, !p._12, !p._13)
+      }
   override val name: String = "posix"
 
   override def setTimes(lastModifiedTime: FileTime,
@@ -69,21 +85,22 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
 
   private lazy val attributes =
     new PosixFileAttributes {
-      private def fileStat()(implicit z: Zone) =
-        getStat()
+      private[this] val s = Zone(implicit z => new Stat(getStat()))
+      private def fileStat()(implicit z: Zone) = s
+        //getStat()
 
       private def fileMode()(implicit z: Zone) =
-        !(fileStat()._13)
+        fileStat().st_mode
 
       private def filePasswd()(implicit z: Zone) =
-        getPasswd(!(fileStat()._4))
+        getPasswd(fileStat().st_uid)
 
       private def fileGroup()(implicit z: Zone) =
-        getGroup(!(fileStat()._5))
+        getGroup(fileStat().st_gid)
 
       override def fileKey =
         Zone { implicit z =>
-          (!(fileStat()._3)).asInstanceOf[Object]
+          (fileStat().st_ino).asInstanceOf[Object]
         }
 
       override def isDirectory =
@@ -106,17 +123,17 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
 
       override def lastAccessTime =
         Zone { implicit z =>
-          FileTime.from(!(fileStat()._7), TimeUnit.SECONDS)
+          FileTime.from(fileStat().st_atime, TimeUnit.SECONDS)
         }
 
       override def lastModifiedTime =
         Zone { implicit z =>
-          FileTime.from(!(fileStat()._8), TimeUnit.SECONDS)
+          FileTime.from(fileStat().st_mtime, TimeUnit.SECONDS)
         }
 
       override def creationTime =
         Zone { implicit z =>
-          FileTime.from(!(fileStat()._9), TimeUnit.SECONDS)
+          FileTime.from(fileStat().st_ctime, TimeUnit.SECONDS)
         }
 
       override def group = new GroupPrincipal {
@@ -145,7 +162,7 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
 
       override def size =
         Zone { implicit z =>
-          !(fileStat()._6)
+          fileStat().st_size
         }
     }
 
