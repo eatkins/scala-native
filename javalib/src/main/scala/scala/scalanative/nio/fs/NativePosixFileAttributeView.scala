@@ -63,6 +63,21 @@ final class NativePosixFileAttributeView(path: Path, options: Array[LinkOption])
       }
     }
 
+  /*
+   *object Benchmark {
+   *var runs = 0
+   *var totalElapsed = 0L
+   *def apply[T](tag: String)(f: => T): T = {
+   *  val now = System.nanoTime
+   *  val res = f
+   *  val elapsed = System.nanoTime - now
+   *  totalElapsed += elapsed
+   *  runs += 1
+   *  println(s"${System.currentTimeMillis} $tag took ${elapsed / 1e6} ms (average ${totalElapsed / 1e6 / runs} ms)")
+   *  res
+   *}
+   *}
+   */
   override def readAttributes(): BasicFileAttributes =
     attributes
 
