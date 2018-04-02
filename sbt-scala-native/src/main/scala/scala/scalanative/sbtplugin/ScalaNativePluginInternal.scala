@@ -135,13 +135,11 @@ object ScalaNativePluginInternal {
 
         Def.task {
           val c = config.withMode(if (mode == "debug") build.Mode.Debug else build.Mode.Release)
-          println(c)
           interceptBuildException(Build.build(c, outpath.toPath))
           outpath
         }
       } else {
         val outpath = (artifactPath in nativeLink).value
-        println(outpath)
         Def.task(outpath)
       }
     }.value,
