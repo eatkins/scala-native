@@ -74,9 +74,7 @@ abstract class FileSystemProvider protected () {
         channel.write(buffer)
       }
       override def write(b: Array[Byte], off: Int, len: Int): Unit = {
-        val buffer = ByteBuffer.wrap(b)
-        buffer.limit(len)
-        channel.write(buffer)
+        channel.write(ByteBuffer.wrap(b))
       }
       override def close(): Unit =
         channel.close()
