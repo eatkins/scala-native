@@ -96,7 +96,10 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
   override def resolve(other: Path): Path =
     if (other.isAbsolute || path.isEmpty) other
     else if (other.toString.isEmpty) this
-    else new UnixPath(fs, rawPath + (if (!rawPath.endsWith("/")) "/" else "") + other.toString())
+    else
+      new UnixPath(
+        fs,
+        rawPath + (if (!rawPath.endsWith("/")) "/" else "") + other.toString())
 
   override def resolve(other: String): Path =
     resolve(new UnixPath(fs, other))
@@ -127,7 +130,8 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
   }
 
   override def toAbsolutePath(): Path = {
-    if (File.isAbsolute(path)) this else new UnixPath(fs, toFile().getAbsolutePath())
+    if (File.isAbsolute(path)) this
+    else new UnixPath(fs, toFile().getAbsolutePath())
   }
 
   override def toRealPath(options: Array[LinkOption]): Path = {
@@ -135,7 +139,7 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
     else {
       new UnixPath(fs, toFile().getCanonicalPath()) match {
         case p if Files.exists(p, Array.empty) => p
-        case p => throw new java.io.IOException(s"File $p does not exist")
+        case p                                 => throw new java.io.IOException(s"File $p does not exist")
       }
     }
   }
@@ -155,7 +159,7 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
 
   override def iterator(): Iterator[Path] =
     new Iterator[Path] {
-      val parts = path.split("/")
+      val parts                       = path.split("/")
       private var i: Int              = 0
       override def remove(): Unit     = throw new UnsupportedOperationException()
       override def hasNext(): Boolean = i < parts.size
@@ -193,7 +197,7 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
 
 private object UnixPath {
   def fastNormalize(path: String): String = {
-    var i = 0
+    var i       = 0
     var current = path.charAt(i)
     while (i < path.size - 1) {
       val next = path.charAt(i + 1)
@@ -204,7 +208,7 @@ private object UnixPath {
             if (i < path.size - 2) {
               path.charAt(i + 2) match {
                 case '.' | '/' => return null
-                case _ =>
+                case _         =>
               }
             }
           case _ =>
@@ -215,8 +219,8 @@ private object UnixPath {
     }
     path.charAt(i) match {
       case '.' if i > 0 && path.charAt(i - 1) == '/' => path.substring(0, i - 2)
-      case '/' if i > 0 => path.substring(0, i - 1)
-      case _ => path
+      case '/' if i > 0                              => path.substring(0, i - 1)
+      case _                                         => path
     }
   }
   def normalized(path: String): String = {
@@ -248,8 +252,8 @@ private object UnixPath {
           if (str.endsWith("/")) str.substring(0, str.length - 1) else str //length > 1
         case idx =>
           val buffer: StringBuffer = new StringBuffer(str)
-          var previous = '/'
-          var i = idx + 1
+          var previous             = '/'
+          var i                    = idx + 1
           while (i < buffer.length) {
             val current = buffer.charAt(i)
             if (previous == '/' && current == '/') {
@@ -260,7 +264,8 @@ private object UnixPath {
             }
           }
           val result = buffer.toString
-          if (result.length > 1 && result.endsWith("/")) result.substring(0, result.length - 1)
+          if (result.length > 1 && result.endsWith("/"))
+            result.substring(0, result.length - 1)
           else result
       }
     }

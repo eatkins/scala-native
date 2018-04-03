@@ -85,13 +85,16 @@ object Files {
     target
   }
 
-  private def copyDir(source: Path, target: Path, options: Array[CopyOption]): Unit = {
+  private def copyDir(source: Path,
+                      target: Path,
+                      options: Array[CopyOption]): Unit = {
     if (options.contains(StandardCopyOption.REPLACE_EXISTING)) {
       deleteRecursive(target)
     }
-    createDirectory(target, Array.empty) 
+    createDirectory(target, Array.empty)
     list(source).iterator.asScala.foreach {
-      case p if isDirectory(p, Array.empty) => copyDir(p, target.resolve(source.relativize(p)), options)
+      case p if isDirectory(p, Array.empty) =>
+        copyDir(p, target.resolve(source.relativize(p)), options)
       case p => copy(p, target.resolve(source.relativize(p)), options)
     }
   }
@@ -169,7 +172,7 @@ object Files {
   private def createTempDirectory(_dir: File,
                                   prefix: String,
                                   attrs: Array[FileAttribute[_]]): Path = {
-                                    val dir = if (_dir == null) tmpDir else _dir
+    val dir  = if (_dir == null) tmpDir else _dir
     val temp = File.createTempFile(if (prefix == null) "" else prefix, "", dir)
     if (temp.delete() && temp.mkdir()) {
       val tempPath = temp.toPath()
@@ -346,33 +349,39 @@ object Files {
   private case class Dirent(basePath: Path, name: String, tpe: CShort) {
     lazy val path = basePath.resolve(name)
   }
-  private def _list(path: Path): scala.Iterator[Dirent] = new scala.Iterator[Dirent] {
-    class Wrapped(val ptr: Ptr[Void])
-    var dir = Zone(implicit z => new Wrapped(opendir(toCString(path.toAbsolutePath.toString)))).ptr
-    val elem: Ptr[dirent]   = stdlib.malloc(sizeof[dirent]).cast[Ptr[dirent]]
-    var _hasNext = false
-    def hasNext = _hasNext
-    def getNext(): Unit = do {
-      _hasNext = readdir(dir, elem) == 0
-      if (!_hasNext) {
-        closedir(dir)
-        stdlib.free(elem.cast[Ptr[Byte]])
-        return
-      } else if (!elem._2._1 == '.') {
-        // java doesn't list '.' and '..', we filter them out.
-        val nextByte = !(elem._2._2)
-        if (nextByte == 0 || (nextByte == '.' && (!(elem._2._3) == 0))) {
-          _hasNext = false
-        }
-      }
-    } while (!_hasNext)
-    getNext()
-    def next: Dirent = {
-      val res = if (_hasNext) Dirent(path, fromCString(elem._2.asInstanceOf[CString]), !elem._3) else throw new NoSuchElementException("next on empty iterator")
+  private def _list(path: Path): scala.Iterator[Dirent] =
+    new scala.Iterator[Dirent] {
+      class Wrapped(val ptr: Ptr[Void])
+      var dir = Zone(implicit z =>
+        new Wrapped(opendir(toCString(path.toAbsolutePath.toString)))).ptr
+      val elem: Ptr[dirent] = stdlib.malloc(sizeof[dirent]).cast[Ptr[dirent]]
+      var _hasNext          = false
+      def hasNext           = _hasNext
+      def getNext(): Unit =
+        do {
+          _hasNext = readdir(dir, elem) == 0
+          if (!_hasNext) {
+            closedir(dir)
+            stdlib.free(elem.cast[Ptr[Byte]])
+            return
+          } else if (!elem._2._1 == '.') {
+            // java doesn't list '.' and '..', we filter them out.
+            val nextByte = !(elem._2._2)
+            if (nextByte == 0 || (nextByte == '.' && (!(elem._2._3) == 0))) {
+              _hasNext = false
+            }
+          }
+        } while (!_hasNext)
       getNext()
-      res
+      def next: Dirent = {
+        val res =
+          if (_hasNext)
+            Dirent(path, fromCString(elem._2.asInstanceOf[CString]), !elem._3)
+          else throw new NoSuchElementException("next on empty iterator")
+        getNext()
+        res
+      }
     }
-  }
 
   def list(dir: Path): Stream[Path] =
     if (!isDirectory(dir, Array.empty)) {
@@ -385,7 +394,8 @@ object Files {
   def move(source: Path, target: Path, options: Array[CopyOption]): Path = {
     if (options.contains(StandardCopyOption.ATOMIC_MOVE)) {
       Zone { implicit z =>
-        stdio.rename(toCString(source.toAbsolutePath().toString), toCString(target.toAbsolutePath().toString))
+        stdio.rename(toCString(source.toAbsolutePath().toString),
+                     toCString(target.toAbsolutePath().toString))
       }
     } else {
       if (isDirectory(source, Array.empty)) copyDir(source, target, options)
@@ -456,13 +466,16 @@ object Files {
     !exists(path, options)
 
   def readAllBytes(path: Path): Array[Byte] = Zone { implicit z =>
-    val len = size(path).toInt
-    val bytes  = scala.scalanative.runtime.ByteArray.alloc(len)
-    val fd = fcntl.open(toCString(path.toString), fcntl.O_RDONLY)
+    val len   = size(path).toInt
+    val bytes = scala.scalanative.runtime.ByteArray.alloc(len)
+    val fd    = fcntl.open(toCString(path.toString), fcntl.O_RDONLY)
     try {
       var offset = 0
       var read   = 0
-      while ({ read = unistd.read(fd, bytes.at(offset), len - offset); read != -1 && (offset + read) < len }) {
+      while ({
+        read = unistd.read(fd, bytes.at(offset), len - offset);
+        read != -1 && (offset + read) < len
+      }) {
         offset += read
       }
       bytes.asInstanceOf[Array[Byte]]
@@ -592,16 +605,15 @@ object Files {
     else {
       start #:: _list(start).toStream.flatMap {
         case p
-          if p.tpe == DT_LNK && options.contains(
+            if p.tpe == DT_LNK && options.contains(
               FileVisitOption.FOLLOW_LINKS) =>
           val newVisited = visited + p.path
           val target     = readSymbolicLink(p.path)
           if (newVisited.contains(target))
             throw new FileSystemLoopException(p.path.toString)
           else walk(p.path, maxDepth, currentDepth + 1, options, newVisited)
-        case p
-            if p.tpe == DT_DIR && currentDepth < maxDepth =>
-            //if Files.isDirectory(p, Array.empty) && currentDepth < maxDepth =>
+        case p if p.tpe == DT_DIR && currentDepth < maxDepth =>
+          //if Files.isDirectory(p, Array.empty) && currentDepth < maxDepth =>
           val newVisited =
             if (options.contains(FileVisitOption.FOLLOW_LINKS)) visited + p.path
             else visited

@@ -183,7 +183,8 @@ object UnixProcess {
           unistd.close(!(errfds + 1))
 
           binaries.foreach { b =>
-            if (unistd.execve(toCString(b), argv, envp) == -1 && errno == e.ENOEXEC) {
+            if (unistd
+                  .execve(toCString(b), argv, envp) == -1 && errno == e.ENOEXEC) {
               unistd.execve(toCString("/bin/sh"),
                             nullTerminate("-c" +: cmd),
                             envp)

@@ -741,8 +741,8 @@ final class _String()
     }
 
     var separatorCount = 0
-    var begin = 0
-    var end = 0
+    var begin          = 0
+    var end            = 0
     while (separatorCount + 1 != max && { end = indexOf(ch, begin); end != -1 }) {
       separatorCount += 1
       begin = end + 1
@@ -774,11 +774,13 @@ final class _String()
   }
 
   private[this] final val REGEX_METACHARACTERS = ".$()[{^?*+\\"
-  @inline private def isRegexMeta(c: Char) = REGEX_METACHARACTERS.indexOf(c) >= 0
+  @inline private def isRegexMeta(c: Char) =
+    REGEX_METACHARACTERS.indexOf(c) >= 0
   def split(expr: _String, max: Int): Array[String] = expr match {
     case e if e.length == 1 && !isRegexMeta(e.charAt(0)) =>
       fastSplit(e.charAt(0), max)
-    case e if e.length == 2 && e.charAt(0) == '\\' && isRegexMeta(e.charAt(1)) =>
+    case e
+        if e.length == 2 && e.charAt(0) == '\\' && isRegexMeta(e.charAt(1)) =>
       fastSplit(e.charAt(1), max)
     case _ => Pattern.compile(expr).split(this, max)
   }

@@ -77,8 +77,12 @@ object System {
         val patch = stackalloc[CInt]
         Platform.macOSXVersion(major, minor, patch)
         val p = !patch
-        sysProps.setProperty("os.version", s"${!major}.${!minor}${if (p != 0) s".$p" else ""}")
-        sysProps.setProperty("os.version", s"${!major}.${!minor}${if (p != 0) s".$p" else ""}")
+        sysProps.setProperty(
+          "os.version",
+          s"${!major}.${!minor}${if (p != 0) s".$p" else ""}")
+        sysProps.setProperty(
+          "os.version",
+          s"${!major}.${!minor}${if (p != 0) s".$p" else ""}")
         val tmpDir = stackalloc[CString]
         Platform.macOSXTmpDir(tmpDir)
         println(fromCString(!tmpDir))

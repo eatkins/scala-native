@@ -51,10 +51,10 @@ private[scalanative] object LLVM {
   def compileNativelib(config: Config,
                        linkerResult: linker.Result,
                        libPath: Path): Path = {
-    val cpaths   = IO.getAll(config.workdir, "glob:**.c").map(_.abs)
-    val cpppaths = IO.getAll(config.workdir, "glob:**.cpp").map(_.abs)
+    val cpaths    = IO.getAll(config.workdir, "glob:**.c").map(_.abs)
+    val cpppaths  = IO.getAll(config.workdir, "glob:**.cpp").map(_.abs)
     val objcpaths = IO.getAll(config.workdir, "glob:**.mm").map(_.abs)
-    val paths    = cpaths ++ cpppaths ++ objcpaths
+    val paths     = cpaths ++ cpppaths ++ objcpaths
 
     // predicate to check if given file path shall be compiled
     // we only include sources of the current gc and exclude
@@ -164,7 +164,9 @@ private[scalanative] object LLVM {
         .map(_.name) ++ config.gc.links
     }
     val linkopts = links.map("-l" + _) ++ config.linkingOptions ++ Seq(
-      "-lpthread") ++ (if (scala.util.Properties.isMac) Seq("-framework", "Foundation") else Nil)
+      "-lpthread") ++ (if (scala.util.Properties.isMac)
+                         Seq("-framework", "Foundation")
+                       else Nil)
     val targetopt = Seq("-target", config.targetTriple)
     val flags     = Seq("-o", outpath.abs) ++ linkopts ++ targetopt
     val opaths    = IO.getAll(nativelib, "glob:**.o").map(_.abs)

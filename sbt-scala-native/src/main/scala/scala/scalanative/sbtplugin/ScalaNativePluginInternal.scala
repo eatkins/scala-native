@@ -131,10 +131,11 @@ object ScalaNativePluginInternal {
         val logger  = streams.value.log.toLogger
         val config  = nativeConfig.value.withLogger(logger)
         val outpath = (artifactPath in nativeLink).value
-        val mode = (nativeMode in Compile).value
+        val mode    = (nativeMode in Compile).value
 
         Def.task {
-          val c = config.withMode(if (mode == "debug") build.Mode.Debug else build.Mode.Release)
+          val c = config.withMode(
+            if (mode == "debug") build.Mode.Debug else build.Mode.Release)
           interceptBuildException(Build.build(c, outpath.toPath))
           outpath
         }

@@ -113,15 +113,15 @@ class UnixFileSystemProvider extends FileSystemProvider {
       path: Path,
       tpe: Class[V],
       options: Array[LinkOption]): V = {
-        tpe match {
-          case t if t == classOf[BasicFileAttributeView] =>
-            new NativePosixFileAttributeView(path, options)
-          case t if t == classOf[PosixFileAttributeView] =>
-            new NativePosixFileAttributeView(path, options)
-          case t if t == classOf[FileOwnerAttributeView] =>
-            new NativePosixFileAttributeView(path, options)
-          case _ => null
-        }
+    tpe match {
+      case t if t == classOf[BasicFileAttributeView] =>
+        new NativePosixFileAttributeView(path, options)
+      case t if t == classOf[PosixFileAttributeView] =>
+        new NativePosixFileAttributeView(path, options)
+      case t if t == classOf[FileOwnerAttributeView] =>
+        new NativePosixFileAttributeView(path, options)
+      case _ => null
+    }
   }.asInstanceOf[V]
   /*
    *override def getFileAttributeView[V <: FileAttributeView](

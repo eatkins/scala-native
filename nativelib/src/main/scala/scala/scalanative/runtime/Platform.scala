@@ -21,7 +21,9 @@ object Platform {
   def littleEndian(): Boolean = extern
 
   @name("scalanative_mac_osx_version")
-  def macOSXVersion(major: Ptr[CInt], minor: Ptr[CInt], patch: Ptr[CInt]): Unit = extern
+  def macOSXVersion(major: Ptr[CInt],
+                    minor: Ptr[CInt],
+                    patch: Ptr[CInt]): Unit = extern
 
   @name("scalanative_mac_osx_tmp_dir")
   def macOSXTmpDir(tmpDir: Ptr[CString]): Unit = extern
