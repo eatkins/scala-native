@@ -45,4 +45,7 @@ int scalanative_little_endian() {
 #ifndef __APPLE__
 void scalanative_mac_osx_version(int *major, int *minor, int *patch) {
 }
+
+void scalanative_mac_osx_tmp_dir(const char **tmp_dir) {
+}
 #endif

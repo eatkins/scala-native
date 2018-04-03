@@ -9,7 +9,7 @@ object dirent {
   type _256 = Digit[_2, Digit[_5, _6]]
   type DIR  = Void
   type dirent =
-    CStruct5[CUnsignedLongLong, CArray[CChar, _256], CShort, CShort, CShort]
+    CStruct3[CUnsignedLongLong, CArray[CChar, _256], CShort]
 
   @name("scalanative_opendir")
   def opendir(name: CString): Ptr[DIR] = extern

@@ -8,8 +8,6 @@ struct scalanative_dirent {
     unsigned long long d_ino;  /** file serial number */
     char d_name[NAME_MAX + 1]; /** name of entry */
     short d_type;
-    short d_reclen;
-    short d_namlen;
 };
 
 int scalanative_dt_unknown() {
@@ -46,19 +44,14 @@ void scalanative_dirent_init(struct dirent *dirent,
                              struct scalanative_dirent *my_dirent) {
     my_dirent->d_ino = dirent->d_ino;
     strncpy(my_dirent->d_name, dirent->d_name, NAME_MAX);
-    //memset(my_dirent->d_name + dirent->d_namlen, '\0', NAME_MAX + 1 - dirent->d_namlen);
     my_dirent->d_name[NAME_MAX] = '\0';
     my_dirent->d_type = dirent->d_type;
-    my_dirent->d_reclen = dirent->d_reclen;
-    my_dirent->d_namlen = dirent->d_namlen;
 }
 
 int scalanative_readdir(DIR *dirp, struct scalanative_dirent *buf) {
-    struct dirent orig_buf;
-    struct dirent *result = NULL;
-    int res = readdir_r(dirp, &orig_buf, &result);
-    if (res == 0 && result) {
-        scalanative_dirent_init(result, buf);
+    struct dirent *orig_buf = readdir(dirp);
+    if (orig_buf != NULL) {
+        scalanative_dirent_init(orig_buf, buf);
         return 0;
     } else {
         return 1;
