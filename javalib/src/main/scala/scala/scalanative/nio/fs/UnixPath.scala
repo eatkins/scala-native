@@ -192,7 +192,32 @@ class UnixPath(private val fs: UnixFileSystem, private val rawPath: String)
 }
 
 private object UnixPath {
+  def fastNormalize(path: String): String = {
+    var i = 0
+    var current = path.charAt(i)
+    while (i < path.size - 1) {
+      val next = path.charAt(i + 1)
+      if (current == '/') {
+        next match {
+          case '/' => return null
+          case '.' =>
+            if (i < path.size - 2) {
+              path.charAt(i + 2) match {
+                case '.' | '/' => return null
+                case _ =>
+              }
+            }
+          case _ =>
+        }
+      }
+      current = next
+      i += 1
+    }
+    if (path.charAt(i) == '/') path.substring(0, path.length - 1) else path
+  }
   def normalized(path: String): String = {
+    val res = fastNormalize(path)
+    if (res != null) return res
     val absolute = path.startsWith("/")
     val components =
       path
