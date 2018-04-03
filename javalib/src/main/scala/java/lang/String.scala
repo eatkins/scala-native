@@ -1,6 +1,5 @@
 package java.lang
 
-import scala.collection.mutable
 import scalanative.native._
 import scalanative.native.string.memcmp
 import scalanative.runtime.CharArray

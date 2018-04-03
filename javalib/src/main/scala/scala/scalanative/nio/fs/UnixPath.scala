@@ -219,90 +219,41 @@ private object UnixPath {
     val res = fastNormalize(path)
     if (res != null) return res
     val absolute = path.startsWith("/")
-    val parts = path.split("/")
-    //val offsets = new Array[(Int, Int)](parts.size)
-    val newParts = new Array[String](parts.size)
-
-    //parts.filterNot(x => x == "." || x == "")
-    var i = 0
-    var j = 0
-    while (i < parts.size) {
-      val s = parts(i)
-      if (s != "" && s != ".") {
-        newParts(j) = s
-        j += 1
-      }
-      i += 1
-    }
-    var offsetIndex = 0
-    var offset = 0
-    /*
-     *while (i < newParts.size) {
-     *  var j = 0
-     *  offset = i
-     *  if (newParts(i) == "..") {
-     *    var depth = 1
-     *    while (i + 1 < newParts.size && newParts(i + 1) == ".." ) {
-     *      depth += 1
-     *      i += 1
-     *    }
-     *    j = offsetIndex
-     *    if (j > 0) {
-     *      if ((i - depth) >= offsets(j - 1)._1)
-     *    } else {
-     *      offsets(offsetIndex) = (offset, depth)
-     *      offsetIndex += 1
-     *    }
-     *  }
-     *  i += 1
-     *}
-     */
-    //println(offsets.toIndexedSeq)
-    val builder = new StringBuilder
-    if (absolute) builder.append("/")
-    i = 0
-    while (i < j - 1) {
-      builder.append(newParts(i))
-      builder.append("/")
-      i += 1
-    }
-    if (j > 0) builder.append(newParts(j))
-    builder.toString
+    val components =
+      path
+        .split("/")
+        .foldLeft(List.empty[String]) {
+          case (acc, "..") =>
+            if (acc.isEmpty && absolute) Nil
+            else if (acc.isEmpty) List("..")
+            else acc.tail
+          case (acc, ".") => acc
+          case (acc, "")  => acc
+          case (acc, seg) => seg :: acc
+        }
+        .reverse
+    if (absolute) components.mkString("/", "/", "")
+    else components.mkString("", "/", "")
   }
 
   def removeRedundantSlashes(str: String): String =
     if (str.length < 2) str
     else {
-      var buffer: StringBuffer = null
-      var i = str.indexOf("/")
-      if (i == -1) return str
-      i += 1
-      var j = str.indexOf("/", i)
-      if (j == -1) return str
-      while (j != -1) {
-        if (j == i) {
-          if (buffer == null) {
-            buffer = new StringBuffer(str.length)
-            if (i > 1) buffer.append(str.substring(0, i - 1))
-          }
-        } else if (buffer != null) {
-          buffer.append("/")
-          buffer.append(str.substring(i, j))
+      val buffer   = new StringBuffer(str)
+      var previous = buffer.charAt(0)
+      var i        = 1
+      while (i < buffer.length) {
+        val current = buffer.charAt(i)
+        if (previous == '/' && current == '/') {
+          buffer.deleteCharAt(i)
+        } else {
+          previous = current
+          i += 1
         }
-        i = j + 1
-        j = str.indexOf("/", i)
       }
-      if (buffer != null) {
-        if (i < str.length) {
-          buffer.append("/")
-          buffer.append(str.substring(i))
-        }
-        val result = buffer.toString
-        if (result.length > 1 && result.endsWith("/")) result.init
-        else result
-      } else {
-        str
-      }
+      val result = buffer.toString
+      if (result.length > 1 && result.endsWith("/")) result.init
+      else result
     }
 
 }
