@@ -207,21 +207,26 @@ private object UnixPath {
   def removeRedundantSlashes(str: String): String =
     if (str.length < 2) str
     else {
-      val buffer   = new StringBuffer(str)
-      var previous = buffer.charAt(0)
-      var i        = 1
-      while (i < buffer.length) {
-        val current = buffer.charAt(i)
-        if (previous == '/' && current == '/') {
-          buffer.deleteCharAt(i)
-        } else {
-          previous = current
-          i += 1
-        }
+      str.indexOf("//") match {
+        case -1 =>
+          if (str.endsWith("/")) str.substring(0, str.length - 1) else str //length > 1
+        case idx =>
+          val buffer: StringBuffer = new StringBuffer(str)
+          var previous = '/'
+          var i = idx + 1
+          while (i < buffer.length) {
+            val current = buffer.charAt(i)
+            if (previous == '/' && current == '/') {
+              buffer.deleteCharAt(i)
+            } else {
+              previous = current
+              i += 1
+            }
+          }
+          val result = buffer.toString
+          if (result.length > 1 && result.endsWith("/")) result.substring(0, result.length - 1)
+          else result
       }
-      val result = buffer.toString
-      if (result.length > 1 && result.endsWith("/")) result.init
-      else result
     }
 
 }
