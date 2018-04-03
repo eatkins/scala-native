@@ -213,7 +213,11 @@ private object UnixPath {
       current = next
       i += 1
     }
-    if (path.charAt(i) == '/') path.substring(0, path.length - 1) else path
+    path.charAt(i) match {
+      case '.' if i > 0 && path.charAt(i - 1) == '/' => path.substring(0, i - 2)
+      case '/' if i > 0 => path.substring(0, i - 1)
+      case _ => path
+    }
   }
   def normalized(path: String): String = {
     val res = fastNormalize(path)
