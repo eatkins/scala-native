@@ -735,31 +735,51 @@ final class _String()
 
   def split(expr: _String): Array[String] = split(expr, 0)
 
-  private def isRegexMeta(c: Char) = c match {
-    case '.' | '$' | '|' | '(' | ')' | '[' | '{' | '^' | '?' | '*' | '+' | '\\' => true
-    case _ => false
+  def fastSplit(ch: Char, max: Int): Array[String] = {
+    if (isEmpty) {
+      return Array("")
+    }
+
+    var separatorCount = 0
+    var begin = 0
+    var end = 0
+    while (separatorCount + 1 != max && { end = indexOf(ch, begin); end != -1 }) {
+      separatorCount += 1
+      begin = end + 1
+    }
+    val lastPartEnd = if (max == 0 && begin == count) {
+      if (separatorCount == count) {
+        return Array.empty[String]
+      }
+      do {
+        begin -= 1
+      } while (charAt(begin - 1) == ch)
+      separatorCount -= count - begin
+      begin
+    } else {
+      count
+    }
+
+    val result = new Array[String](separatorCount + 1)
+    begin = 0
+    var i = 0
+    while (i < separatorCount) {
+      end = indexOf(ch, begin)
+      result(i) = substring(begin, end);
+      begin = end + 1
+      i += 1
+    }
+    result(separatorCount) = substring(begin, lastPartEnd)
+    result
   }
+
+  private[this] final val REGEX_METACHARACTERS = ".$()[{^?*+\\"
+  @inline private def isRegexMeta(c: Char) = REGEX_METACHARACTERS.indexOf(c) >= 0
   def split(expr: _String, max: Int): Array[String] = expr match {
     case e if e.length == 1 && !isRegexMeta(e.charAt(0)) =>
-      val c = e.charAt(0)
-      var i = 0
-      var j = 0
-      val res = new scala.collection.mutable.ArrayBuffer[String]
-      while (j < count) {
-        if (charAt(j) == c) {
-          res += substring(i, j)
-          j += 1
-          while (j < count && charAt(j) == c) {
-            res += ""
-            j += 1
-          }
-          i = j
-        } else {
-          j += 1
-        }
-      }
-      if (i < count) res += substring(i, count)
-      res.toArray
+      fastSplit(e.charAt(0), max)
+    case e if e.length == 2 && e.charAt(0) == '\\' && isRegexMeta(e.charAt(1)) =>
+      fastSplit(e.charAt(1), max)
     case _ => Pattern.compile(expr).split(this, max)
   }
 
