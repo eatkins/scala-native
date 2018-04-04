@@ -358,6 +358,54 @@ object FilesSuite extends tests.Suite {
     }
   }
 
+  private val TempFile = "^(a?)(\\d+)\\.?([a-z]*)$".r
+  test("Files.createTempDirectory works with null prefix") {
+    val dir = Files.createTempDirectory(null)
+    try {
+      dir.getFileName.toString match {
+        case TempFile("", digits, "") => assert(true)
+        case r                        => assert(false)
+      }
+      assert(Files.exists(dir))
+      assert(Files.isDirectory(dir))
+    } finally Files.delete(dir)
+  }
+
+  test("Files.createTempDirectory works with short prefix") {
+    val dir = Files.createTempDirectory("a")
+    try {
+      dir.getFileName.toString match {
+        case TempFile("a", digits, "") => assert(true)
+        case _                         => assert(false)
+      }
+      assert(Files.exists(dir))
+      assert(Files.isDirectory(dir))
+    } finally Files.delete(dir)
+  }
+  test("Files.createTempFile works with null prefix") {
+    val file = Files.createTempFile(null, "txt")
+    try {
+      file.getFileName.toString match {
+        case TempFile("", digits, "txt") => assert(true)
+        case _                           => assert(false)
+      }
+      assert(Files.exists(file))
+      assert(Files.isRegularFile(file))
+    } finally Files.delete(file)
+  }
+
+  test("Files.createTempFile works with short prefix") {
+    val file = Files.createTempFile("a", null)
+    try {
+      file.getFileName.toString match {
+        case TempFile("a", digits, "tmp") => assert(true)
+        case _                            => assert(false)
+      }
+      assert(Files.exists(file))
+      assert(Files.isRegularFile(file))
+    } finally Files.delete(file)
+  }
+
   test("Files.isRegularFile reports files as such") {
     withTemporaryDirectory { dirFile =>
       val dir  = dirFile.toPath
