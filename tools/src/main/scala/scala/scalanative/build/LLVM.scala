@@ -4,7 +4,7 @@ package build
 import java.nio.file.{Files, Path, Paths}
 import java.util.Arrays
 import scala.collection.JavaConverters._
-import scala.util.Try
+import scala.util.{Properties, Try}
 import scala.sys.process._
 import scalanative.build.IO.RichPath
 
@@ -51,9 +51,10 @@ private[scalanative] object LLVM {
   def compileNativelib(config: Config,
                        linkerResult: linker.Result,
                        libPath: Path): Path = {
-    val cpaths   = IO.getAll(config.workdir, "glob:**.c").map(_.abs)
-    val cpppaths = IO.getAll(config.workdir, "glob:**.cpp").map(_.abs)
-    val paths    = cpaths ++ cpppaths
+    val cpaths    = IO.getAll(config.workdir, "glob:**.c").map(_.abs)
+    val cpppaths  = IO.getAll(config.workdir, "glob:**.cpp").map(_.abs)
+    val objcpaths = IO.getAll(config.workdir, "glob:**.mm").map(_.abs)
+    val paths     = cpaths ++ cpppaths ++ objcpaths
 
     // predicate to check if given file path shall be compiled
     // we only include sources of the current gc and exclude
@@ -162,8 +163,8 @@ private[scalanative] object LLVM {
       librt ++ libunwind ++ linkerResult.links
         .map(_.name) ++ config.gc.links
     }
-    val linkopts = links.map("-l" + _) ++ config.linkingOptions ++ Seq(
-      "-lpthread")
+    val osxOpts   = if (Properties.isMac) Seq("-framework", "Foundation") else Nil
+    val linkopts  = links.map("-l" + _) ++ config.linkingOptions ++ osxOpts :+ "-lpthread"
     val targetopt = Seq("-target", config.targetTriple)
     val flags     = Seq("-o", outpath.abs) ++ linkopts ++ targetopt
     val opaths    = IO.getAll(nativelib, "glob:**.o").map(_.abs)

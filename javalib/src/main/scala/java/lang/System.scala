@@ -53,11 +53,23 @@ object System {
     } else {
       if (Platform.isMac) {
         sysProps.setProperty("os.name", "Mac OS X")
+        val major = stackalloc[CInt]
+        val minor = stackalloc[CInt]
+        val patch = stackalloc[CInt]
+        Platform.macOSXVersion(major, minor, patch)
+        val p = !patch
+        sysProps.setProperty(
+          "os.version",
+          s"${!major}.${!minor}${if (p != 0) s".$p" else ""}")
+        val tmpDir = stackalloc[CString]
+        Platform.macOSXTmpDir(tmpDir)
+        sysProps.setProperty("java.io.tmpdir", fromCString(!tmpDir))
       } else {
         val u = stackalloc[utsname]
         uname(u)
         sysProps.setProperty("os.name", u.sysname)
         sysProps.setProperty("os.version", u.release)
+        sysProps.setProperty("java.io.tmpdir", "/tmp")
       }
       sysProps.setProperty("file.separator", "/")
       sysProps.setProperty("path.separator", ":")
