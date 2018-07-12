@@ -49,7 +49,7 @@ script:
   - > 
     sbt \
       "-no-colors" \
-      "-J-Xmx2G" \
+      "-J-Xmx3G" \
       "^^ $SBT_VERSION" \
       rebuild \
       "set scriptedBufferLog in sbtScalaNative := false" \
